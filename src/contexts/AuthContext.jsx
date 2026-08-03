@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase, isSupabaseConfigured, getAppOrigin } from '../lib/supabase.js';
+import { supabase, isSupabaseConfigured, formatAuthError } from '../lib/supabase.js';
 import { setActiveBackend } from '../database/storageBackend.js';
 
 const GUEST_KEY = 'project-ascension-guest';
@@ -71,17 +71,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: getAppOrigin() },
-    });
-    if (error) throw error;
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(formatAuthError(error.message));
   }, []);
 
   const signIn = useCallback(async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) throw new Error(formatAuthError(error.message));
     sessionStorage.removeItem(GUEST_KEY);
     setGuestMode(false);
     setActiveBackend('supabase');

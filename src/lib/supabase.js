@@ -1,18 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 
 const rawUrl = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+const anonKey = (
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+  || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  || ''
+).trim();
 
 /**
- * Users often paste the REST endpoint (…/rest/v1) from the Supabase dashboard.
- * The client expects the project origin only: https://YOUR_REF.supabase.co
+ * Always reduce to project origin: https://YOUR_REF.supabase.co
+ * Handles users pasting the REST endpoint (…/rest/v1) from the dashboard.
  */
 export function normalizeSupabaseUrl(url) {
   if (!url) return '';
-  let normalized = url.trim().replace(/\/+$/, '');
-  normalized = normalized.replace(/\/rest\/v1$/i, '');
-  normalized = normalized.replace(/\/auth\/v1$/i, '');
-  return normalized.replace(/\/+$/, '');
+  try {
+    const parsed = new URL(url.trim());
+    if (!parsed.hostname.endsWith('.supabase.co')) return '';
+    return `${parsed.protocol}//${parsed.hostname}`;
+  } catch {
+    return '';
+  }
 }
 
 const url = normalizeSupabaseUrl(rawUrl);
@@ -23,7 +30,6 @@ export function isSupabaseConfigured() {
     url
     && anonKey
     && url.startsWith('https://')
-    && url.includes('supabase.co')
     && anonKey.length > 20
   );
 }
@@ -37,5 +43,23 @@ export function getAppOrigin() {
 
 /** Supabase client — null when not configured (local-only mode). */
 export const supabase = isSupabaseConfigured()
-  ? createClient(url, anonKey)
+  ? createClient(url, anonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  })
   : null;
+
+/** Map cryptic Supabase errors to actionable messages. */
+export function formatAuthError(message) {
+  if (!message) return 'Authentication failed';
+  if (/invalid path specified/i.test(message)) {
+    return 'Supabase URL is misconfigured. In GitHub secrets, set VITE_SUPABASE_URL to https://YOUR_PROJECT.supabase.co (no /rest/v1).';
+  }
+  if (/invalid api key/i.test(message)) {
+    return 'Supabase API key is invalid. Use the publishable or anon key from Supabase → Settings → API Keys.';
+  }
+  return message;
+}
