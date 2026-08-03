@@ -2,11 +2,14 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { supabase, isSupabaseConfigured } from '../lib/supabase.js';
 import { setActiveBackend } from '../database/storageBackend.js';
 
+const GUEST_KEY = 'project-ascension-guest';
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(isSupabaseConfigured());
+  const [guestMode, setGuestMode] = useState(() => sessionStorage.getItem(GUEST_KEY) === '1');
 
   useEffect(() => {
     if (!supabase) {
@@ -14,18 +17,57 @@ export function AuthProvider({ children }) {
       return undefined;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let cancelled = false;
+
+    const finishLoading = (session) => {
+      if (cancelled) return;
       setUser(session?.user ?? null);
       setActiveBackend(session?.user ? 'supabase' : 'indexeddb');
       setLoading(false);
-    });
+    };
+
+    const timeout = setTimeout(() => {
+      if (cancelled) return;
+      console.warn('Supabase auth timed out — using local mode');
+      setActiveBackend('indexeddb');
+      setLoading(false);
+    }, 8000);
+
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        clearTimeout(timeout);
+        finishLoading(session);
+      })
+      .catch((err) => {
+        clearTimeout(timeout);
+        console.warn('Supabase auth unavailable:', err.message);
+        setActiveBackend('indexeddb');
+        setLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setActiveBackend(session?.user ? 'supabase' : 'indexeddb');
+      if (session?.user) {
+        sessionStorage.removeItem(GUEST_KEY);
+        setGuestMode(false);
+        setActiveBackend('supabase');
+      } else if (!sessionStorage.getItem(GUEST_KEY)) {
+        setActiveBackend('indexeddb');
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const continueAsGuest = useCallback(() => {
+    sessionStorage.setItem(GUEST_KEY, '1');
+    setGuestMode(true);
+    setActiveBackend('indexeddb');
   }, []);
 
   const signUp = useCallback(async (email, password) => {
@@ -36,23 +78,31 @@ export function AuthProvider({ children }) {
   const signIn = useCallback(async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    sessionStorage.removeItem(GUEST_KEY);
+    setGuestMode(false);
     setActiveBackend('supabase');
     window.location.reload();
   }, []);
 
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    sessionStorage.removeItem(GUEST_KEY);
+    setGuestMode(false);
+    if (supabase && user) {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    }
     setActiveBackend('indexeddb');
     window.location.reload();
-  }, []);
+  }, [user]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
+        guestMode,
         isCloudEnabled: isSupabaseConfigured(),
+        continueAsGuest,
         signUp,
         signIn,
         signOut,

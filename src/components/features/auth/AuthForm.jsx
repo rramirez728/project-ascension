@@ -7,7 +7,7 @@ import { useAuth } from '../../../contexts/AuthContext.jsx';
 
 /** Email/password sign-in and sign-up form. */
 export function AuthForm() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, continueAsGuest } = useAuth();
   const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -96,6 +96,16 @@ export function AuthForm() {
           {mode === 'signin' ? 'Sign up' : 'Sign in'}
         </button>
       </p>
+
+      <div className="mt-6 pt-4 border-t border-border text-center">
+        <button
+          type="button"
+          onClick={continueAsGuest}
+          className="text-sm text-muted hover:text-foreground transition-colors"
+        >
+          Continue without account — data stays on this device only
+        </button>
+      </div>
     </Card>
   );
 }
