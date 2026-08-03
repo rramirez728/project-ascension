@@ -36,6 +36,10 @@ export function isSupabaseConfigured() {
 
 /** App URL for auth email redirects (GitHub Pages subpath aware). */
 export function getAppOrigin() {
+  const configured = import.meta.env.VITE_APP_URL?.trim();
+  if (configured) {
+    return configured.endsWith('/') ? configured : `${configured}/`;
+  }
   const base = import.meta.env.BASE_URL || '/';
   const path = base.endsWith('/') ? base : `${base}/`;
   return `${window.location.origin}${path}`;

@@ -26,7 +26,7 @@ export function AuthForm() {
         await signIn(email, password);
       } else {
         await signUp(email, password);
-        setMessage('Account created! Check your email to confirm, then sign in.');
+        setMessage('Account created! Check your email to confirm, then sign in here. (If the email link fails, just sign in on this page after confirming.)');
         setMode('signin');
       }
     } catch (err) {
