@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
+import { LogOut, Cloud } from 'lucide-react';
 import { Card } from '../../ui/Card.jsx';
 import { Input, Select } from '../../ui/Input.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { Toast } from '../../ui/Toast.jsx';
 import { useTheme } from '../../../contexts/ThemeContext.jsx';
+import { useAuth } from '../../../contexts/AuthContext.jsx';
 
-/** Settings form for goals, macros, units, and theme. */
+/** Settings form for goals, macros, units, theme, and account. */
 export function SettingsForm({ settings, onSave }) {
   const { setTheme } = useTheme();
+  const { user, isCloudEnabled, signOut } = useAuth();
   const [form, setForm] = useState(settings);
   const [toast, setToast] = useState(null);
 
@@ -43,6 +46,22 @@ export function SettingsForm({ settings, onSave }) {
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+        {isCloudEnabled && user && (
+          <Card>
+            <div className="flex items-start gap-3">
+              <Cloud size={20} className="text-accent shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-1">Account</h3>
+                <p className="text-sm truncate">{user.email}</p>
+                <p className="text-xs text-muted mt-1">Data is saved to your cloud account.</p>
+              </div>
+              <Button type="button" variant="secondary" size="sm" onClick={signOut}>
+                <LogOut size={14} /> Sign Out
+              </Button>
+            </div>
+          </Card>
+        )}
+
         <Card>
           <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-4">Weight Goals</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

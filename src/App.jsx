@@ -1,5 +1,7 @@
+import { AuthProvider } from './contexts/AuthContext.jsx';
 import { SettingsProvider, useSettingsContext } from './contexts/SettingsContext.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
+import { AuthGate } from './components/auth/AuthGate.jsx';
 import { AppRouter } from './routes/AppRouter.jsx';
 
 /** Bridges persisted settings theme into ThemeProvider once loaded. */
@@ -23,8 +25,12 @@ function AppWithTheme() {
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <AppWithTheme />
-    </SettingsProvider>
+    <AuthProvider>
+      <AuthGate>
+        <SettingsProvider>
+          <AppWithTheme />
+        </SettingsProvider>
+      </AuthGate>
+    </AuthProvider>
   );
 }
