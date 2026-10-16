@@ -1,0 +1,1 @@
+function o(t,e,n){return t*.453592}function c(t,e){return t==null||Number.isNaN(t)?"—":`${t.toFixed(1)} ${e}`}function s(t,e){const n=(Number(t)||0)*12+(Number(e)||0);return Math.round(n*2.54*10)/10}function u(t){const e=Number(t)/2.54,n=Math.floor(e/12);let r=Math.round(e-n*12);return r===12?{feet:n+1,inches:0}:{feet:n,inches:r}}export{s as a,o as b,u as c,c as f};
