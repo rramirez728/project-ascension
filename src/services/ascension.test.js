@@ -192,8 +192,9 @@ describe('assistant tool rules', () => {
     const five = buildSuggestedPlan(5);
     expect(five.days[1].focus).toBe('Chest & Triceps');
     expect(five.days[1].exercises[0].exerciseName).toBe('Bench Press');
-    expect(stepSequence('cut')).toContain('pace');
-    expect(stepSequence('maintain')).not.toContain('pace');
+    const steps = stepSequence();
+    expect(steps.indexOf('macros')).toBeLessThan(steps.indexOf('workout'));
+    expect(steps).not.toContain('pace');
   });
 
   it('groups logged sets by exercise instead of interleaving them', () => {

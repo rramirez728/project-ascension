@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button.jsx';
 import { Input } from '../components/ui/Input.jsx';
 import { useSettingsContext } from '../contexts/SettingsContext.jsx';
 import { trainingRepository, weightRepository } from '../database/index.js';
-import { FITNESS_GOALS, buildMacroSuggestion, suggestCarbGrams } from '../services/calculations/energyCalculations.js';
+import { FITNESS_GOALS } from '../services/calculations/energyCalculations.js';
 import { applyCalculatedTargets } from '../services/calculations/goalLock.js';
 import { buildSuggestedPlan } from '../services/plans/suggestedPlan.js';
 import { todayISO } from '../utils/dates.js';
@@ -21,11 +21,8 @@ const ACTIVITY_CHOICES = [
 
 const DAY_CHOICES = [2, 3, 4, 5, 6];
 
-export function stepSequence(fitnessGoal) {
-  const steps = ['welcome', 'sex', 'age', 'height', 'weight', 'goalWeight', 'activity', 'goal'];
-  if (fitnessGoal !== 'maintain') steps.push('pace');
-  steps.push('days', 'review');
-  return steps;
+export function stepSequence() {
+  return ['welcome', 'sex', 'age', 'height', 'weight', 'goalWeight', 'activity', 'goal', 'days', 'macros', 'workout'];
 }
 
 function inRange(value, min, max) {
@@ -55,7 +52,6 @@ export default function OnboardingPage() {
   const [stepId, setStepId] = useState('welcome');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [carbsTouched, setCarbsTouched] = useState(false);
   const [targets, setTargets] = useState({ calories: '', protein: '', carbs: '', fat: '' });
   const [form, setForm] = useState({
     sex: '',
@@ -67,26 +63,14 @@ export default function OnboardingPage() {
     goalWeight: '',
     activityLevel: '',
     fitnessGoal: '',
-    calorieAdjustment: 300,
     trainingDays: null,
   });
 
-  const steps = stepSequence(form.fitnessGoal);
+  const steps = stepSequence();
   const position = Math.max(1, steps.indexOf(stepId) + 1);
   const heightCm = units === 'lb'
     ? feetInchesToCm(form.heightFeet, form.heightInches)
     : Number(form.heightCm);
-
-  const suggestion = useMemo(() => buildMacroSuggestion({
-    sex: form.sex,
-    age: Number(form.age),
-    heightCm,
-    weight: Number(form.currentWeight),
-    units,
-    activityLevel: form.activityLevel,
-    fitnessGoal: form.fitnessGoal || 'maintain',
-    calorieAdjustment: form.fitnessGoal === 'maintain' ? 0 : Number(form.calorieAdjustment) || 300,
-  }), [form, heightCm, units]);
 
   const plan = useMemo(
     () => buildSuggestedPlan(form.trainingDays || 3),
@@ -95,34 +79,11 @@ export default function OnboardingPage() {
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const seedTargets = (nextForm) => {
-    const nextHeight = units === 'lb'
-      ? feetInchesToCm(nextForm.heightFeet, nextForm.heightInches)
-      : Number(nextForm.heightCm);
-    const nextSuggestion = buildMacroSuggestion({
-      sex: nextForm.sex,
-      age: Number(nextForm.age),
-      heightCm: nextHeight,
-      weight: Number(nextForm.currentWeight),
-      units,
-      activityLevel: nextForm.activityLevel,
-      fitnessGoal: nextForm.fitnessGoal || 'maintain',
-      calorieAdjustment: nextForm.fitnessGoal === 'maintain' ? 0 : Number(nextForm.calorieAdjustment) || 300,
-    });
-    setCarbsTouched(false);
-    setTargets({
-      calories: nextSuggestion.calories ?? '',
-      protein: nextSuggestion.protein ?? '',
-      carbs: nextSuggestion.carbs ?? '',
-      fat: nextSuggestion.fat ?? '',
-    });
-  };
-
   const advance = (nextForm = form) => {
-    const sequence = stepSequence(nextForm.fitnessGoal);
+    const sequence = stepSequence();
     const index = Math.max(0, sequence.indexOf(stepId));
     const nextId = sequence[Math.min(index + 1, sequence.length - 1)];
-    if (nextId === 'review') seedTargets(nextForm);
+    setForm(nextForm);
     setStepId(nextId);
   };
 
@@ -132,9 +93,7 @@ export default function OnboardingPage() {
   };
 
   const choose = (key, value) => {
-    const nextForm = { ...form, [key]: value };
-    setForm(nextForm);
-    advance(nextForm);
+    advance({ ...form, [key]: value });
   };
 
   const canContinue = (() => {
@@ -153,17 +112,7 @@ export default function OnboardingPage() {
   const targetsReady = positive(targets.calories) && positive(targets.protein) && positive(targets.fat)
     && targets.carbs !== '' && Number.isFinite(Number(targets.carbs)) && Number(targets.carbs) >= 0;
 
-  const updateCalories = (value) => {
-    setTargets((prev) => {
-      const next = { ...prev, calories: value };
-      const calories = Number(value);
-      if (!carbsTouched && Number.isFinite(calories) && calories > 0) {
-        const carbs = suggestCarbGrams(calories, Number(prev.protein), Number(prev.fat));
-        if (carbs != null && Number.isFinite(carbs)) next.carbs = String(carbs);
-      }
-      return next;
-    });
-  };
+  const setTarget = (key, value) => setTargets((prev) => ({ ...prev, [key]: value }));
 
   const finish = async () => {
     setSaving(true);
@@ -176,7 +125,6 @@ export default function OnboardingPage() {
         goalWeight: Number(form.goalWeight),
         activityLevel: form.activityLevel,
         fitnessGoal: form.fitnessGoal,
-        calorieAdjustment: form.fitnessGoal === 'maintain' ? 0 : Number(form.calorieAdjustment) || 300,
         activitySource: 'manual',
         onboardingComplete: true,
       };
@@ -216,12 +164,6 @@ export default function OnboardingPage() {
     }
   };
 
-  const paceDetail = (amount) => (
-    form.fitnessGoal === 'bulk'
-      ? `About ${amount} calories above maintenance`
-      : `About ${amount} calories below maintenance`
-  );
-
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-lg">
@@ -229,17 +171,14 @@ export default function OnboardingPage() {
 
         {stepId === 'welcome' && (
           <div>
-            <h1 className="text-3xl font-semibold">Welcome</h1>
-            <p className="text-muted mt-3">
-              A few questions, one at a time. At the end you will get suggested daily macros and a weekly workout plan, and you can change the numbers before saving.
-            </p>
+            <h1 className="text-3xl font-semibold">Let's calculate a plan for you</h1>
           </div>
         )}
 
         {stepId === 'sex' && (
           <div>
             <h1 className="text-3xl font-semibold">Sex</h1>
-            <p className="text-muted mt-3 mb-6">Used for the calorie estimate.</p>
+            <p className="text-muted mt-3 mb-6">Saved on your profile.</p>
             <div className="space-y-3">
               <ChoiceButton label="Female" selected={form.sex === 'female'} onClick={() => choose('sex', 'female')} />
               <ChoiceButton label="Male" selected={form.sex === 'male'} onClick={() => choose('sex', 'male')} />
@@ -307,7 +246,7 @@ export default function OnboardingPage() {
         {stepId === 'goal' && (
           <div>
             <h1 className="text-3xl font-semibold">Fitness goal</h1>
-            <p className="text-muted mt-3 mb-6">This sets the direction of the calorie target.</p>
+            <p className="text-muted mt-3 mb-6">What you are working toward.</p>
             <div className="space-y-3">
               {FITNESS_GOALS.map((option) => (
                 <ChoiceButton
@@ -318,27 +257,6 @@ export default function OnboardingPage() {
                   onClick={() => choose('fitnessGoal', option.value)}
                 />
               ))}
-            </div>
-          </div>
-        )}
-
-        {stepId === 'pace' && (
-          <div>
-            <h1 className="text-3xl font-semibold">{form.fitnessGoal === 'bulk' ? 'How big a surplus?' : 'How aggressive a cut?'}</h1>
-            <p className="text-muted mt-3 mb-6">You can still type your own calories on the last screen.</p>
-            <div className="space-y-3">
-              <ChoiceButton
-                label="Moderate"
-                detail={paceDetail(300)}
-                selected={Number(form.calorieAdjustment) === 300}
-                onClick={() => choose('calorieAdjustment', 300)}
-              />
-              <ChoiceButton
-                label="Aggressive"
-                detail={paceDetail(500)}
-                selected={Number(form.calorieAdjustment) === 500}
-                onClick={() => choose('calorieAdjustment', 500)}
-              />
             </div>
           </div>
         )}
@@ -360,18 +278,23 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {stepId === 'review' && (
-          <div>
-            <h1 className="text-3xl font-semibold">Your plan</h1>
-            <p className="text-muted mt-3">
-              Estimated maintenance is {suggestion.tdee ?? '—'} calories. The suggestion is {suggestion.calories ?? '—'} calories. Change the calories if you want a different target, then save.
-            </p>
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <Input label="Calories" type="number" min="1" value={targets.calories} onChange={(event) => updateCalories(event.target.value)} />
-              <Input label="Protein (g)" type="number" min="1" value={targets.protein} onChange={(event) => setTargets((prev) => ({ ...prev, protein: event.target.value }))} />
-              <Input label="Carbs (g)" type="number" min="0" value={targets.carbs} onChange={(event) => { setCarbsTouched(true); setTargets((prev) => ({ ...prev, carbs: event.target.value })); }} />
-              <Input label="Fat (g)" type="number" min="1" value={targets.fat} onChange={(event) => setTargets((prev) => ({ ...prev, fat: event.target.value }))} />
+        {stepId === 'macros' && (
+          <form onSubmit={(event) => { event.preventDefault(); if (targetsReady) advance(); }}>
+            <h1 className="text-3xl font-semibold">Configure your plan</h1>
+            <p className="text-muted mt-3 mb-6">Enter the daily calories, protein, carbs, and fat you want to follow.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="Calories" type="number" min="1" autoFocus value={targets.calories} onChange={(event) => setTarget('calories', event.target.value)} />
+              <Input label="Protein (g)" type="number" min="1" value={targets.protein} onChange={(event) => setTarget('protein', event.target.value)} />
+              <Input label="Carbs (g)" type="number" min="0" value={targets.carbs} onChange={(event) => setTarget('carbs', event.target.value)} />
+              <Input label="Fat (g)" type="number" min="1" value={targets.fat} onChange={(event) => setTarget('fat', event.target.value)} />
             </div>
+          </form>
+        )}
+
+        {stepId === 'workout' && (
+          <div>
+            <h1 className="text-3xl font-semibold">Suggested workout plan</h1>
+            <p className="text-muted mt-3">Based on the days you can train.</p>
             <div className="mt-6 space-y-3">
               <p className="text-sm font-medium">{plan.name}</p>
               {plan.days.map((day) => (
@@ -406,7 +329,10 @@ export default function OnboardingPage() {
           {['age', 'height', 'weight', 'goalWeight'].includes(stepId) && (
             <Button onClick={() => advance()} disabled={!canContinue}>Continue</Button>
           )}
-          {stepId === 'review' && (
+          {stepId === 'macros' && (
+            <Button onClick={() => advance()} disabled={!targetsReady}>Continue</Button>
+          )}
+          {stepId === 'workout' && (
             <Button onClick={finish} disabled={!targetsReady || saving}>
               {saving ? 'Saving…' : 'Use this plan'}
             </Button>
