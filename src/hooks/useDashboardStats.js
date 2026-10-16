@@ -6,6 +6,7 @@ import { sumMacros, calculateRemaining } from '../services/calculations/macroCal
 import { estimateGoalDate } from '../services/calculations/goalCalculations.js';
 import { todayISO } from '../utils/dates.js';
 import { formatWeight } from '../utils/units.js';
+import { onDataChanged } from '../utils/dataEvents.js';
 
 /** Aggregates all dashboard stats from repositories. */
 export function useDashboardStats() {
@@ -60,7 +61,9 @@ export function useDashboardStats() {
   useEffect(() => {
     if (!settingsLoading && settings) {
       refresh();
+      return onDataChanged(refresh);
     }
+    return undefined;
   }, [settings, settingsLoading, refresh]);
 
   return { stats, loading: loading || settingsLoading, refresh };

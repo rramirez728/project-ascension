@@ -1,6 +1,6 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import { Sidebar } from './Sidebar.jsx';
 import { MobileNav } from './MobileNav.jsx';
 import { TopBar } from './TopBar.jsx';
@@ -28,6 +28,15 @@ export function AppShell() {
           </AnimatePresence>
         </main>
         <MobileNav />
+        {location.pathname !== '/assistant' && (
+          <Link
+            to="/assistant"
+            className="md:hidden fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-accent text-white shadow-lg shadow-accent/30 flex items-center justify-center"
+            aria-label="Open AI assistant"
+          >
+            <Sparkles size={22} />
+          </Link>
+        )}
       </div>
     </div>
   );

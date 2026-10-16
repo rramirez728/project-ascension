@@ -1,10 +1,13 @@
-import { Menu } from 'lucide-react';
+import { LogIn, Menu } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { NAV_GROUPS } from './navItems.js';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
 /** Mobile top bar with slide-out menu. */
 export function TopBar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, isCloudEnabled, showSignIn } = useAuth();
 
   return (
     <>
@@ -25,33 +28,41 @@ export function TopBar() {
       {menuOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
-          <div className="relative w-64 h-full bg-surface border-r border-border overflow-y-auto">
-            <nav className="p-4 space-y-1 mt-16">
-              {[
-                ['/', 'Dashboard'],
-                ['/weight', 'Weight'],
-                ['/measurements', 'Measurements'],
-                ['/food', 'Food Log'],
-                ['/workouts', 'Workouts'],
-                ['/habits', 'Habits'],
-                ['/photos', 'Photos'],
-                ['/settings', 'Settings'],
-              ].map(([to, label]) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={to === '/'}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block px-3 py-2.5 rounded-xl text-sm font-medium ${
-                      isActive ? 'bg-accent/10 text-accent' : 'text-muted hover:bg-border/20'
-                    }`
-                  }
-                >
-                  {label}
-                </NavLink>
+          <div className="relative w-72 h-full bg-surface border-r border-border overflow-y-auto">
+            <nav className="p-4 space-y-4 mt-16">
+              {NAV_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">{group.label}</p>
+                  {group.items.map(({ to, label, end }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={end}
+                      onClick={() => setMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `block px-3 py-2.5 rounded-xl text-sm font-medium ${
+                          isActive ? 'bg-accent/10 text-accent' : 'text-muted hover:bg-border/20'
+                        }`
+                      }
+                    >
+                      {label}
+                    </NavLink>
+                  ))}
+                </div>
               ))}
             </nav>
+            {isCloudEnabled && !user && (
+              <div className="p-4 border-t border-border">
+                <button
+                  type="button"
+                  onClick={showSignIn}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-accent text-white px-3 py-2.5 text-sm font-medium"
+                >
+                  <LogIn size={16} />
+                  Sign in
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

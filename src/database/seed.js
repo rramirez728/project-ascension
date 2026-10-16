@@ -14,6 +14,20 @@ export const DEFAULT_SETTINGS = {
   units: 'lb',
   theme: 'dark',
   usdaApiKey: '',
+  displayName: '',
+  age: null,
+  sex: null,
+  heightCm: null,
+  activityLevel: 'moderately_active',
+  fitnessGoal: 'maintain',
+  activitySource: 'manual',
+  calorieTargetManual: false,
+  proteinTargetManual: false,
+  carbTargetManual: false,
+  fatTargetManual: false,
+  onboardingComplete: false,
+  calorieAdjustment: 250,
+  trustedAutoLogging: false,
 };
 
 /** Seed default settings if none exist. */
@@ -21,7 +35,17 @@ export async function seedDatabase() {
   const existing = await db.settings.get('user');
   if (!existing) {
     await db.settings.put(DEFAULT_SETTINGS);
-  } else if (existing.usdaApiKey === undefined) {
-    await db.settings.put({ ...existing, usdaApiKey: '' });
+    return;
   }
+
+  const migrated = { ...DEFAULT_SETTINGS, ...existing, id: 'user' };
+  if (existing.onboardingComplete === undefined) {
+    migrated.onboardingComplete = true;
+    migrated.calorieTargetManual = true;
+    migrated.proteinTargetManual = true;
+    migrated.carbTargetManual = true;
+    migrated.fatTargetManual = true;
+  }
+  if (existing.usdaApiKey === undefined) migrated.usdaApiKey = '';
+  await db.settings.put(migrated);
 }

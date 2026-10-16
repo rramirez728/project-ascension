@@ -19,6 +19,20 @@
  * @property {WeightUnit} units
  * @property {ThemeMode} theme
  * @property {string} [usdaApiKey]
+ * @property {string} [displayName]
+ * @property {number|null} [age]
+ * @property {'male'|'female'|null} [sex]
+ * @property {number|null} [heightCm]
+ * @property {'sedentary'|'lightly_active'|'moderately_active'|'very_active'|'extremely_active'} [activityLevel]
+ * @property {'cut'|'maintain'|'bulk'} [fitnessGoal]
+ * @property {'manual'|'healthkit'} [activitySource]
+ * @property {boolean} [calorieTargetManual]
+ * @property {boolean} [proteinTargetManual]
+ * @property {boolean} [carbTargetManual]
+ * @property {boolean} [fatTargetManual]
+ * @property {boolean} [onboardingComplete]
+ * @property {number} [calorieAdjustment]
+ * @property {boolean} [trustedAutoLogging]
  */
 
 /**
@@ -69,6 +83,15 @@
  * @property {number} carbs
  * @property {number} fat
  * @property {number} [fdcId]
+ * @property {string} [brand]
+ * @property {number|null} [quantity]
+ * @property {string} [unit]
+ * @property {'raw'|'cooked'|'unknown'} [preparationState]
+ * @property {string} [mealTime]
+ * @property {'usda'|'label'|'estimate'|'custom'|'user'} [source]
+ * @property {'high'|'medium'|'low'} [confidence]
+ * @property {string} [sourceNote]
+ * @property {string} [clientRequestId]
  */
 
 /**

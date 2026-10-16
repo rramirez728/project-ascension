@@ -164,7 +164,10 @@ export function FoodLogTracker({
                 <div>
                   <p className="font-medium">{entry.name}</p>
                   <p className="text-sm text-muted">
+                    {entry.quantity ? `${entry.quantity} ${entry.unit} · ` : ''}
+                    {entry.preparationState && entry.preparationState !== 'unknown' ? `${entry.preparationState} · ` : ''}
                     {entry.calories} cal · P {entry.protein}g · C {entry.carbs}g · F {entry.fat}g
+                    {entry.confidence && entry.confidence !== 'high' ? ' · estimate' : ''}
                   </p>
                 </div>
                 <div className="flex gap-2">

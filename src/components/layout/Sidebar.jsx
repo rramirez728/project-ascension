@@ -1,29 +1,17 @@
 import { NavLink } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Scale,
-  Ruler,
-  Utensils,
-  Dumbbell,
-  CheckSquare,
-  Camera,
-  Settings,
-  TrendingUp,
-} from 'lucide-react';
+import { LogIn, TrendingUp } from 'lucide-react';
+import { NAV_GROUPS } from './navItems.js';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/weight', icon: Scale, label: 'Weight' },
-  { to: '/measurements', icon: Ruler, label: 'Measurements' },
-  { to: '/food', icon: Utensils, label: 'Food Log' },
-  { to: '/workouts', icon: Dumbbell, label: 'Workouts' },
-  { to: '/habits', icon: CheckSquare, label: 'Habits' },
-  { to: '/photos', icon: Camera, label: 'Photos' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-];
+const toneClass = {
+  nutrition: 'text-nutrition',
+  training: 'text-training',
+};
 
 /** Desktop sidebar navigation. */
 export function Sidebar() {
+  const { user, isCloudEnabled, showSignIn } = useAuth();
+
   return (
     <aside className="hidden md:flex flex-col w-64 shrink-0 border-r border-border bg-surface/50 h-screen sticky top-0">
       <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
@@ -35,25 +23,50 @@ export function Sidebar() {
           <p className="text-xs text-muted">Fitness Dashboard</p>
         </div>
       </div>
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin">
-        {navItems.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-accent/10 text-accent'
-                  : 'text-muted hover:text-foreground hover:bg-border/20'
-              }`
-            }
-          >
-            <Icon size={18} />
-            {label}
-          </NavLink>
+      <nav className="flex-1 p-4 space-y-5 overflow-y-auto scrollbar-thin">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label}>
+            <p className={`px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider ${toneClass[group.tone] || 'text-muted'}`}>
+              {group.label}
+            </p>
+            <div className="space-y-1">
+              {group.items.map(({ to, icon: Icon, label, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                      isActive
+                        ? group.tone === 'training'
+                          ? 'bg-training/10 text-training'
+                          : group.tone === 'nutrition'
+                            ? 'bg-nutrition/10 text-nutrition'
+                            : 'bg-accent/10 text-accent'
+                        : 'text-muted hover:text-foreground hover:bg-border/20'
+                    }`
+                  }
+                >
+                  <Icon size={18} />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
+      {isCloudEnabled && !user && (
+        <div className="p-4 border-t border-border">
+          <button
+            type="button"
+            onClick={showSignIn}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-accent text-white px-3 py-2.5 text-sm font-medium"
+          >
+            <LogIn size={16} />
+            Sign in
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

@@ -15,6 +15,21 @@ export function formatWeight(value, unit) {
   return `${value.toFixed(1)} ${unit}`;
 }
 
+/** Convert feet and inches to centimeters. */
+export function feetInchesToCm(feet, inches) {
+  const totalInches = (Number(feet) || 0) * 12 + (Number(inches) || 0);
+  return Math.round(totalInches * 2.54 * 10) / 10;
+}
+
+/** Split centimeters into feet and inches. */
+export function cmToFeetInches(cm) {
+  const totalInches = Number(cm) / 2.54;
+  const feet = Math.floor(totalInches / 12);
+  let inches = Math.round(totalInches - feet * 12);
+  if (inches === 12) return { feet: feet + 1, inches: 0 };
+  return { feet, inches };
+}
+
 /** Unit label for display. */
 export function unitLabel(unit) {
   return unit === 'kg' ? 'kg' : 'lbs';

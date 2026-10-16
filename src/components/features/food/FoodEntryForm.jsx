@@ -37,6 +37,12 @@ export function FoodEntryForm({
   const [fat, setFat] = useState(initial?.fat?.toString() ?? '');
   const [servingDescription, setServingDescription] = useState('');
   const [macroSource, setMacroSource] = useState('');
+  const [source, setSource] = useState(initial?.source ?? 'user');
+  const [confidence, setConfidence] = useState(initial?.confidence ?? 'high');
+  const [quantity, setQuantity] = useState(initial?.quantity?.toString() ?? '');
+  const [unit, setUnit] = useState(initial?.unit ?? 'g');
+  const [preparationState, setPreparationState] = useState(initial?.preparationState ?? 'unknown');
+  const [brand, setBrand] = useState(initial?.brand ?? '');
   const [fdcId, setFdcId] = useState(initial?.fdcId ?? null);
   const [barcode, setBarcode] = useState('');
   const [barcodeLoading, setBarcodeLoading] = useState(false);
@@ -53,6 +59,9 @@ export function FoodEntryForm({
     setServingDescription(food.servingDescription ?? '');
     setMacroSource(food.source ?? '');
     setFdcId(food.fdcId ?? null);
+    setBrand(food.brandOwner || food.brand || '');
+    setSource(food.source === 'label' ? 'label' : food.fdcId ? 'usda' : 'user');
+    setConfidence('high');
     setBarcodeError('');
   };
 
@@ -103,6 +112,12 @@ export function FoodEntryForm({
       carbs: parseFloat(carbs) || 0,
       fat: parseFloat(fat) || 0,
       fdcId,
+      brand: brand.trim() || null,
+      quantity: quantity === '' ? null : parseFloat(quantity),
+      unit,
+      preparationState,
+      source,
+      confidence,
     });
   };
 
@@ -132,6 +147,27 @@ export function FoodEntryForm({
       )}
 
       <Select label="Meal" options={MEALS} value={mealType} onChange={(e) => setMealType(e.target.value)} />
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Input label="Amount" type="number" step="0.1" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+        <Select
+          label="Unit"
+          options={['g', 'oz', 'lb', 'ml', 'cup', 'piece', 'slice', 'serving'].map((value) => ({ value, label: value }))}
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+        />
+        <Select
+          label="Preparation"
+          options={[
+            { value: 'unknown', label: 'Not specified' },
+            { value: 'raw', label: 'Raw' },
+            { value: 'cooked', label: 'Cooked' },
+          ]}
+          value={preparationState}
+          onChange={(e) => setPreparationState(e.target.value)}
+        />
+        <Input label="Brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
+      </div>
 
       {!isEditing && (
         <SavedFoodsModalRow
@@ -194,14 +230,12 @@ export function FoodEntryForm({
         <Input label="Fat (g)" type="number" step="0.1" value={fat} onChange={(e) => setFat(e.target.value)} />
       </div>
 
-      {!isEditing && (
-        <div className="flex items-center gap-3">
-          <Button type="button" variant="secondary" onClick={handleSaveFood} disabled={!name.trim()}>
-            <BookmarkPlus size={16} /> Save to My Foods
-          </Button>
-          {saveMessage && <span className="text-sm text-success">{saveMessage}</span>}
-        </div>
-      )}
+      <div className="flex items-center gap-3">
+        <Button type="button" variant="secondary" onClick={handleSaveFood} disabled={!name.trim()}>
+          <BookmarkPlus size={16} /> Save to My Foods
+        </Button>
+        {saveMessage && <span className="text-sm text-success">{saveMessage}</span>}
+      </div>
 
       <div className="flex gap-3 justify-end pt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>

@@ -14,6 +14,8 @@ export default {
         success: 'var(--color-success)',
         warning: 'var(--color-warning)',
         danger: 'var(--color-danger)',
+        nutrition: 'var(--color-nutrition)',
+        training: 'var(--color-training)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

@@ -10,6 +10,8 @@ import { workoutRepository as localWorkout } from './repositories/workoutReposit
 import { habitRepository as localHabit } from './repositories/habitRepository.js';
 import { photoRepository as localPhoto } from './repositories/photoRepository.js';
 import { savedFoodRepository as localSavedFood } from './repositories/savedFoodRepository.js';
+import { goalHistoryRepository as localGoalHistory } from './repositories/goalHistoryRepository.js';
+import { trainingRepository as localTraining } from './repositories/trainingRepository.js';
 import { settingsRepository as cloudSettings } from './repositories/supabase/settingsRepository.js';
 import { weightRepository as cloudWeight } from './repositories/supabase/weightRepository.js';
 import { measurementRepository as cloudMeasurement } from './repositories/supabase/measurementRepository.js';
@@ -18,6 +20,8 @@ import { workoutRepository as cloudWorkout } from './repositories/supabase/worko
 import { habitRepository as cloudHabit } from './repositories/supabase/habitRepository.js';
 import { photoRepository as cloudPhoto } from './repositories/supabase/photoRepository.js';
 import { savedFoodRepository as cloudSavedFood } from './repositories/supabase/savedFoodRepository.js';
+import { goalHistoryRepository as cloudGoalHistory } from './repositories/supabase/goalHistoryRepository.js';
+import { trainingRepository as cloudTraining } from './repositories/supabase/trainingRepository.js';
 
 export const settingsRepository = createDualRepository(localSettings, cloudSettings);
 export const weightRepository = createDualRepository(localWeight, cloudWeight);
@@ -27,3 +31,5 @@ export const workoutRepository = createDualRepository(localWorkout, cloudWorkout
 export const habitRepository = createDualRepository(localHabit, cloudHabit);
 export const photoRepository = createDualRepository(localPhoto, cloudPhoto);
 export const savedFoodRepository = createDualRepository(localSavedFood, cloudSavedFood);
+export const goalHistoryRepository = createDualRepository(localGoalHistory, cloudGoalHistory);
+export const trainingRepository = createDualRepository(localTraining, cloudTraining);

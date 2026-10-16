@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { foodRepository } from '../database/index.js';
 import { todayISO } from '../utils/dates.js';
+import { onDataChanged } from '../utils/dataEvents.js';
 
 /** Hook for food log CRUD filtered by date. */
 export function useFoodLog(date = todayISO()) {
@@ -16,6 +17,7 @@ export function useFoodLog(date = todayISO()) {
 
   useEffect(() => {
     refresh();
+    return onDataChanged(refresh);
   }, [refresh]);
 
   const addEntry = async (entry) => {

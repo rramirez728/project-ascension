@@ -1,0 +1,3 @@
+[functions.assistant]
+entrypoint = "./functions/assistant/index.ts"
+verify_jwt = true

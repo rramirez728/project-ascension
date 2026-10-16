@@ -6,13 +6,20 @@ import { Button } from '../../ui/Button.jsx';
 import { Toast } from '../../ui/Toast.jsx';
 import { useTheme } from '../../../contexts/ThemeContext.jsx';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
+import { resetLoggedData } from '../../../services/resetUserData.js';
+import { ACTIVITY_OPTIONS, FITNESS_GOALS } from '../../../services/calculations/energyCalculations.js';
+import { cmToFeetInches, feetInchesToCm } from '../../../utils/units.js';
 
 /** Settings form for goals, macros, units, theme, and account. */
 export function SettingsForm({ settings, onSave }) {
   const { setTheme } = useTheme();
-  const { user, isCloudEnabled, signOut } = useAuth();
+  const { user, isCloudEnabled, signOut, updatePassword, showSignIn } = useAuth();
   const [form, setForm] = useState(settings);
   const [toast, setToast] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const heightParts = cmToFeetInches(settings?.heightCm || 0);
 
   useEffect(() => {
     if (settings) setForm(settings);
@@ -36,8 +43,21 @@ export function SettingsForm({ settings, onSave }) {
       waterGoal: parseInt(form.waterGoal, 10),
       stepsGoal: parseInt(form.stepsGoal, 10),
       sleepGoal: parseFloat(form.sleepGoal),
+      age: form.age === '' || form.age == null ? null : parseInt(form.age, 10),
+      heightCm: (() => {
+        const height = form.units === 'lb'
+          ? feetInchesToCm(form.heightFeet ?? heightParts.feet, form.heightInches ?? heightParts.inches)
+          : parseFloat(form.heightCm);
+        return Number.isFinite(height) && height > 0 ? height : null;
+      })(),
+      calorieAdjustment: parseInt(form.calorieAdjustment, 10) || 250,
+      trustedAutoLogging: Boolean(form.trustedAutoLogging),
     };
     await onSave(updates);
+    if (newPassword) {
+      await updatePassword(newPassword);
+      setNewPassword('');
+    }
     setTheme(updates.theme);
     setToast({ message: 'Settings saved successfully', type: 'success' });
     setTimeout(() => setToast(null), 3000);
@@ -46,6 +66,14 @@ export function SettingsForm({ settings, onSave }) {
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+        {isCloudEnabled && !user && (
+          <Card>
+            <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-2">Account</h3>
+            <p className="text-sm">You are using this device only. Sign in to use the assistant and save your data to your account.</p>
+            <Button type="button" className="mt-4" onClick={showSignIn}>Sign in</Button>
+          </Card>
+        )}
+
         {isCloudEnabled && user && (
           <Card>
             <div className="flex items-start gap-3">
@@ -59,8 +87,74 @@ export function SettingsForm({ settings, onSave }) {
                 <LogOut size={14} /> Sign Out
               </Button>
             </div>
+            <div className="mt-4 max-w-sm">
+              <Input
+                label="New password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                minLength={6}
+                autoComplete="new-password"
+                placeholder="Leave blank to keep the current password"
+              />
+            </div>
           </Card>
         )}
+
+        <Card>
+          <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-4">Profile</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Name" value={form.displayName ?? ''} onChange={(e) => handleChange('displayName', e.target.value)} />
+            <Input label="Age" type="number" value={form.age ?? ''} onChange={(e) => handleChange('age', e.target.value)} />
+            <Select
+              label="Sex used for metabolic calculations"
+              options={[
+                { value: '', label: 'Not set' },
+                { value: 'female', label: 'Female' },
+                { value: 'male', label: 'Male' },
+              ]}
+              value={form.sex ?? ''}
+              onChange={(e) => handleChange('sex', e.target.value || null)}
+            />
+            <Select
+              label="Activity level"
+              options={ACTIVITY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+              value={form.activityLevel ?? 'moderately_active'}
+              onChange={(e) => handleChange('activityLevel', e.target.value)}
+            />
+            <Select
+              label="Fitness goal"
+              options={FITNESS_GOALS.map((option) => ({ value: option.value, label: option.label }))}
+              value={form.fitnessGoal ?? 'maintain'}
+              onChange={(e) => handleChange('fitnessGoal', e.target.value)}
+            />
+            <Input
+              label="Calorie adjustment"
+              type="number"
+              value={form.calorieAdjustment ?? 250}
+              onChange={(e) => handleChange('calorieAdjustment', e.target.value)}
+            />
+            {form.units === 'lb' ? (
+              <>
+                <Input label="Height (ft)" type="number" value={form.heightFeet ?? heightParts.feet} onChange={(e) => handleChange('heightFeet', e.target.value)} />
+                <Input label="Height (in)" type="number" value={form.heightInches ?? heightParts.inches} onChange={(e) => handleChange('heightInches', e.target.value)} />
+              </>
+            ) : (
+              <Input label="Height (cm)" type="number" value={form.heightCm ?? ''} onChange={(e) => handleChange('heightCm', e.target.value)} />
+            )}
+          </div>
+          <p className="text-xs text-muted mt-3">
+            Activity level is selected manually. Apple Health is not available in the browser, so it is not added on top of this estimate.
+          </p>
+          <label className="mt-4 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={Boolean(form.trustedAutoLogging)}
+              onChange={(e) => handleChange('trustedAutoLogging', e.target.checked)}
+            />
+            Trusted auto-logging for the AI assistant
+          </label>
+        </Card>
 
         <Card>
           <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-4">Weight Goals</h3>
@@ -86,6 +180,7 @@ export function SettingsForm({ settings, onSave }) {
 
         <Card>
           <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-4">Daily Macro Goals</h3>
+          <p className="text-xs text-muted mb-4">Changing these numbers locks them. Later estimates will not replace a target you set here.</p>
           <div className="grid grid-cols-2 gap-4">
             <Input label="Calories" type="number" value={form.dailyCalories} onChange={(e) => handleChange('dailyCalories', e.target.value)} />
             <Input label="Protein (g)" type="number" value={form.proteinGoal} onChange={(e) => handleChange('proteinGoal', e.target.value)} />
@@ -141,6 +236,43 @@ export function SettingsForm({ settings, onSave }) {
 
         <Button type="submit" size="lg">Save Settings</Button>
       </form>
+
+      <Card className="max-w-2xl mt-6">
+        <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-2">Start over</h3>
+        <p className="text-sm text-muted">
+          This deletes logged weight, food, workouts, measurements, habits, and photos, including old weigh-ins. Your account and the targets on this page stay.
+        </p>
+        {confirmReset ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" disabled={resetting} onClick={() => setConfirmReset(false)}>Cancel</Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={resetting}
+              onClick={async () => {
+                setResetting(true);
+                try {
+                  await resetLoggedData();
+                  setConfirmReset(false);
+                  setToast({ message: 'Logged data deleted. Your account and targets are still here.', type: 'success' });
+                  setTimeout(() => setToast(null), 3000);
+                } catch (error) {
+                  setToast({ message: error.message || 'Could not reset data.', type: 'error' });
+                  setTimeout(() => setToast(null), 4000);
+                } finally {
+                  setResetting(false);
+                }
+              }}
+            >
+              {resetting ? 'Deleting…' : 'Delete all logged data'}
+            </Button>
+          </div>
+        ) : (
+          <Button type="button" variant="danger" className="mt-4" onClick={() => setConfirmReset(true)}>
+            Reset my data
+          </Button>
+        )}
+      </Card>
 
       <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
     </>

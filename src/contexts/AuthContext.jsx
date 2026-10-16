@@ -70,6 +70,11 @@ export function AuthProvider({ children }) {
     setActiveBackend('indexeddb');
   }, []);
 
+  const showSignIn = useCallback(() => {
+    sessionStorage.removeItem(GUEST_KEY);
+    setGuestMode(false);
+  }, []);
+
   const signUp = useCallback(async (email, password) => {
     const { error } = await supabase.auth.signUp({
       email,
@@ -99,6 +104,20 @@ export function AuthProvider({ children }) {
     window.location.reload();
   }, [user]);
 
+  const resetPassword = useCallback(async (email) => {
+    if (!supabase) throw new Error('Cloud accounts are not configured.');
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: getAppOrigin(),
+    });
+    if (error) throw new Error(formatAuthError(error.message));
+  }, []);
+
+  const updatePassword = useCallback(async (password) => {
+    if (!supabase) throw new Error('Cloud accounts are not configured.');
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw new Error(formatAuthError(error.message));
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -107,9 +126,12 @@ export function AuthProvider({ children }) {
         guestMode,
         isCloudEnabled: isSupabaseConfigured(),
         continueAsGuest,
+        showSignIn,
         signUp,
         signIn,
         signOut,
+        resetPassword,
+        updatePassword,
       }}
     >
       {children}

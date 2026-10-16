@@ -1,4 +1,4 @@
-import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays } from 'date-fns';
 
 /** Format ISO date string for display. */
 export function formatDate(dateStr, pattern = 'MMM d, yyyy') {
@@ -40,4 +40,9 @@ export function lastNDays(n) {
 /** Short weekday label from ISO date. */
 export function formatWeekday(dateStr) {
   return format(parseISO(dateStr), 'EEE');
+}
+
+/** Shift an ISO date by a number of days. */
+export function shiftISO(dateStr, days) {
+  return format(addDays(parseISO(dateStr), days), 'yyyy-MM-dd');
 }

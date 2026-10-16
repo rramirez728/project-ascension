@@ -16,10 +16,30 @@ async function getByDate(date) {
   return db.foodEntries.where('date').equals(date).toArray();
 }
 
+/** @param {string} start @param {string} end */
+async function getByDateRange(start, end) {
+  return db.foodEntries.where('date').between(start, end, true, true).sortBy('date');
+}
+
+async function findByClientRequestId(clientRequestId) {
+  if (!clientRequestId) return null;
+  return db.foodEntries.where('clientRequestId').equals(clientRequestId).first() ?? null;
+}
+
 /** @param {Omit<import('../../types/index.js').FoodEntry, 'id'>} item */
 async function create(item) {
+  if (item.clientRequestId) {
+    const existing = await findByClientRequestId(item.clientRequestId);
+    if (existing) return existing.id;
+  }
   const id = generateId();
-  await db.foodEntries.put({ ...item, id });
+  await db.foodEntries.put({
+    preparationState: 'unknown',
+    source: 'user',
+    confidence: 'high',
+    ...item,
+    id,
+  });
   return id;
 }
 
@@ -39,6 +59,8 @@ export const foodRepository = {
   getAll,
   getById,
   getByDate,
+  getByDateRange,
+  findByClientRequestId,
   create,
   update,
   delete: remove,
