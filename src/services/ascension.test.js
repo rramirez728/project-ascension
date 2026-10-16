@@ -5,6 +5,10 @@ import { applyCalculatedTargets, lockEditedTargets } from './calculations/goalLo
 import { preparationMatches, scaleFoodMacros } from './calculations/foodScaling.js';
 import { countsAsCompleted, detectPersonalRecords, estimatedOneRepMax, totalVolume } from './calculations/trainingCalculations.js';
 import { findFoodCorrectionTarget, findSetCorrectionTarget, isHypotheticalUtterance, validateToolCall } from './ai/toolValidation.js';
+import { canonicalExerciseName, sameExercise } from '../data/exercises.js';
+import { buildSuggestedPlan } from './plans/suggestedPlan.js';
+import { groupLoggedSets } from '../pages/WorkoutPage.jsx';
+import { stepSequence } from '../pages/OnboardingPage.jsx';
 
 describe('nutrition totals', () => {
   it('adds, edits, and deletes a food from the daily total', () => {
@@ -170,6 +174,37 @@ describe('assistant tool rules', () => {
       { id: 'b', exerciseName: 'Cable Row', setIndex: 5 },
     ];
     expect(findSetCorrectionTarget(sets, { exerciseName: 'cable row', lastSet: true }).set.id).toBe('b');
+  });
+
+  it('matches inclined dumbbell bench press to the catalog press', () => {
+    expect(sameExercise('inclined dumbbell bench press', 'Incline Dumbbell Press')).toBe(true);
+    expect(canonicalExerciseName('inclined dumbbell bench press')).toBe('Incline Dumbbell Press');
+    expect(sameExercise('Bench Press', 'Incline Dumbbell Press')).toBe(false);
+    expect(sameExercise('barbell bench', 'Bench Press')).toBe(true);
+  });
+
+  it('builds a weekly plan from committed training days', () => {
+    const plan = buildSuggestedPlan(4);
+    expect(plan.name).toBe('4-day upper/lower');
+    expect(plan.days).toHaveLength(7);
+    expect(plan.days.filter((day) => day.exercises.length).map((day) => day.weekday)).toEqual([1, 2, 4, 5]);
+    expect(plan.days[0].focus).toBe('Rest');
+    const five = buildSuggestedPlan(5);
+    expect(five.days[1].focus).toBe('Chest & Triceps');
+    expect(five.days[1].exercises[0].exerciseName).toBe('Bench Press');
+    expect(stepSequence('cut')).toContain('pace');
+    expect(stepSequence('maintain')).not.toContain('pace');
+  });
+
+  it('groups logged sets by exercise instead of interleaving them', () => {
+    const groups = groupLoggedSets([
+      { id: '1', exerciseName: 'Bicep curls', setIndex: 1 },
+      { id: '2', exerciseName: 'Cable Flys', setIndex: 1 },
+      { id: '3', exerciseName: 'Bicep curls', setIndex: 2 },
+      { id: '4', exerciseName: 'Cable Flys', setIndex: 2 },
+    ]);
+    expect(groups.map((group) => group.name)).toEqual(['Bicep curls', 'Cable Flys']);
+    expect(groups[0].sets.map((set) => set.setIndex)).toEqual([1, 2]);
   });
 
   it('does not report a failed validation as saved', () => {

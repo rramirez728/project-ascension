@@ -23,16 +23,54 @@ export const EXERCISE_CATALOG = [
   { name: 'Hanging Leg Raise', muscleGroup: 'abs', aliases: [] },
 ];
 
+const ANGLES = new Set(['incline', 'decline']);
+const IMPLEMENTS = new Set(['dumbbell', 'barbell', 'cable']);
+
+/** Lowercase tokens, with inclined/incline unified and filler "bench" dropped on angled presses. */
+export function exerciseTokens(input) {
+  const text = String(input || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\binclined\b/g, 'incline');
+  let tokens = text.split(/\s+/).filter(Boolean);
+  const dropBench = tokens.includes('press')
+    && tokens.some((token) => ANGLES.has(token))
+    && tokens.some((token) => IMPLEMENTS.has(token));
+  if (dropBench) tokens = tokens.filter((token) => token !== 'bench');
+  return [...new Set(tokens)].sort();
+}
+
+function tokenKey(input) {
+  return exerciseTokens(input).join(' ');
+}
+
+/** Stable key shared by a name, its aliases, and close variants such as "inclined dumbbell bench press". */
+export function exerciseMatchKey(input, catalog = EXERCISE_CATALOG) {
+  const key = tokenKey(input);
+  if (!key) return '';
+  const item = catalog.find((entry) => (
+    [entry.name, ...(entry.aliases ?? [])].some((name) => tokenKey(name) === key)
+  ));
+  return item ? tokenKey(item.name) : key;
+}
+
+export function sameExercise(a, b, catalog = EXERCISE_CATALOG) {
+  const left = exerciseMatchKey(a, catalog);
+  const right = exerciseMatchKey(b, catalog);
+  return Boolean(left) && left === right;
+}
+
+/** Catalog display name when the input matches a name or alias. */
+export function canonicalExerciseName(input, catalog = EXERCISE_CATALOG) {
+  const key = exerciseMatchKey(input, catalog);
+  if (!key) return null;
+  return catalog.find((entry) => tokenKey(entry.name) === key)?.name ?? null;
+}
+
 /** Resolve a spoken or typed exercise name to the catalog entry. */
 export function resolveExerciseName(input, catalog = EXERCISE_CATALOG) {
-  const query = String(input || '').trim().toLowerCase();
-  if (!query) return null;
-  const exact = catalog.find((item) => item.name.toLowerCase() === query);
-  if (exact) return exact;
-  const alias = catalog.find((item) => item.aliases?.some((name) => name.toLowerCase() === query));
-  if (alias) return alias;
-  const partial = catalog.find((item) => (
-    item.name.toLowerCase().includes(query) || query.includes(item.name.toLowerCase())
-  ));
-  return partial ?? null;
+  const key = exerciseMatchKey(input, catalog);
+  if (!key) return null;
+  return catalog.find((entry) => tokenKey(entry.name) === key) ?? null;
 }

@@ -2,6 +2,7 @@ import { supabase } from '../../../lib/supabase.js';
 import { generateId } from '../../../utils/id.js';
 import { getUserId, throwIfError } from './helpers.js';
 import { detectPersonalRecords } from '../../../services/calculations/trainingCalculations.js';
+import { sameExercise } from '../../../data/exercises.js';
 
 function mapPlanDay(row, exercises) {
   return {
@@ -203,12 +204,28 @@ async function createSession(item) {
   return id;
 }
 
+async function namesLike(userId, exerciseName) {
+  const { data, error } = await supabase
+    .from('exercise_sets')
+    .select('exercise_name')
+    .eq('user_id', userId);
+  throwIfError(error, 'Failed to load exercise history');
+  const names = new Set(
+    (data ?? [])
+      .map((row) => row.exercise_name)
+      .filter((name) => sameExercise(name, exerciseName)),
+  );
+  if (exerciseName) names.add(exerciseName);
+  return [...names];
+}
+
 async function recordPrs(userId, exerciseName, sessionId, date, unit, newSets) {
+  const names = await namesLike(userId, exerciseName);
   const { data, error } = await supabase
     .from('exercise_sets')
     .select('*')
     .eq('user_id', userId)
-    .eq('exercise_name', exerciseName);
+    .in('exercise_name', names);
   throwIfError(error, 'Failed to load exercise history');
   const history = (data ?? []).map(mapSet);
   const records = detectPersonalRecords({ historySets: history, newSets, sessionId, date, unit });
@@ -312,11 +329,12 @@ async function deleteSet(id) {
 
 async function getExerciseHistory(exerciseName) {
   const userId = await getUserId();
+  const names = await namesLike(userId, exerciseName);
   const { data, error } = await supabase
     .from('exercise_sets')
     .select('*, workout_sessions!inner(date, status)')
     .eq('user_id', userId)
-    .eq('exercise_name', exerciseName);
+    .in('exercise_name', names);
   throwIfError(error, 'Failed to load exercise history');
   return (data ?? [])
     .map((row) => ({

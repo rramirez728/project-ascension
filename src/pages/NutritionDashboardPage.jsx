@@ -4,11 +4,8 @@ import { PageHeader } from '../components/layout/PageHeader.jsx';
 import { Card, CardTitle } from '../components/ui/Card.jsx';
 import { ProgressRing } from '../components/ui/ProgressRing.jsx';
 import { DateNavigator } from '../components/ui/DateNavigator.jsx';
-import { NutritionOnboarding } from '../components/features/nutrition/NutritionOnboarding.jsx';
 import { useNutritionDashboard } from '../hooks/useNutritionDashboard.js';
 import { useSettings } from '../hooks/useSettings.js';
-import { applyCalculatedTargets } from '../services/calculations/goalLock.js';
-import { weightRepository } from '../database/index.js';
 import { todayISO } from '../utils/dates.js';
 import { formatWeight } from '../utils/units.js';
 import { TrendChart } from '../components/charts/TrendChart.jsx';
@@ -21,56 +18,11 @@ const RINGS = [
 ];
 
 export default function NutritionDashboardPage() {
-  const { settings, updateSettings } = useSettings();
+  const { settings } = useSettings();
   const [date, setDate] = useState(todayISO());
   const { data, loading } = useNutritionDashboard(date);
 
   if (!settings) return null;
-
-  const finishOnboarding = async ({ accept, custom, profile, suggestion, customTargets, currentWeight }) => {
-    const base = { ...settings, ...profile };
-    const locked = {
-      calorieTargetManual: true,
-      proteinTargetManual: true,
-      carbTargetManual: true,
-      fatTargetManual: true,
-    };
-    const next = custom && customTargets
-      ? {
-          ...base,
-          ...locked,
-          dailyCalories: customTargets.calories,
-          proteinGoal: customTargets.protein,
-          carbGoal: customTargets.carbs,
-          fatGoal: customTargets.fat,
-        }
-      : accept
-        ? applyCalculatedTargets(base, suggestion, { accept: true })
-        : { ...base, ...locked };
-    await updateSettings({ ...next, goalChangeSource: 'user' });
-    if (currentWeight) {
-      await weightRepository.create({ date: todayISO(), weight: currentWeight, note: 'Starting weight' });
-    }
-  };
-
-  const skipOnboarding = async () => {
-    await updateSettings({
-      onboardingComplete: true,
-      calorieTargetManual: true,
-      proteinTargetManual: true,
-      carbTargetManual: true,
-      fatTargetManual: true,
-    });
-  };
-
-  if (!settings.onboardingComplete) {
-    return (
-      <div>
-        <PageHeader title="Nutrition" subtitle="Set up targets before the dashboard starts tracking against them" />
-        <NutritionOnboarding settings={settings} onFinish={finishOnboarding} onSkip={skipOnboarding} />
-      </div>
-    );
-  }
 
   const targets = data?.targets;
   const consumed = data?.consumed;

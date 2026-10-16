@@ -1,6 +1,6 @@
 import { db } from '../db.js';
 import { generateId } from '../../utils/id.js';
-import { EXERCISE_CATALOG } from '../../data/exercises.js';
+import { EXERCISE_CATALOG, sameExercise } from '../../data/exercises.js';
 import { detectPersonalRecords } from '../../services/calculations/trainingCalculations.js';
 
 async function ensureExercises() {
@@ -152,8 +152,13 @@ async function createSession(item) {
   return id;
 }
 
+async function setsNamedLike(exerciseName) {
+  const sets = await db.exerciseSets.toArray();
+  return sets.filter((set) => sameExercise(set.exerciseName, exerciseName));
+}
+
 async function recordPrs(exerciseName, sessionId, date, unit, newSets) {
-  const history = await db.exerciseSets.where('exerciseName').equals(exerciseName).toArray();
+  const history = await setsNamedLike(exerciseName);
   const records = detectPersonalRecords({
     historySets: history.map((set) => ({ ...set, exerciseName })),
     newSets,
@@ -220,7 +225,7 @@ async function updateSet(id, updates) {
     existing.sessionId,
     session?.date,
     next.unit,
-    siblings.filter((set) => set.exerciseName === next.exerciseName),
+    siblings.filter((set) => sameExercise(set.exerciseName, next.exerciseName)),
   );
   return { set: next, records };
 }
@@ -231,7 +236,7 @@ async function deleteSet(id) {
 
 async function getExerciseHistory(exerciseName) {
   await importLegacy();
-  const sets = await db.exerciseSets.where('exerciseName').equals(exerciseName).toArray();
+  const sets = await setsNamedLike(exerciseName);
   const sessions = await db.workoutSessions.toArray();
   const byId = new Map(sessions.map((session) => [session.id, session]));
   return sets

@@ -9,9 +9,28 @@ import { useTraining } from '../hooks/useTraining.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { todayISO } from '../utils/dates.js';
 import { totalVolume } from '../services/calculations/trainingCalculations.js';
+import { canonicalExerciseName } from '../data/exercises.js';
 
 function emptySet() {
   return { weight: '', reps: '', isWarmup: false, isFailure: false };
+}
+
+/** Keep each exercise's sets together, in the order that exercise first appeared. */
+export function groupLoggedSets(sets) {
+  const groups = [];
+  const index = new Map();
+  for (const set of sets ?? []) {
+    const name = set.exerciseName;
+    if (!index.has(name)) {
+      index.set(name, groups.length);
+      groups.push({ name, sets: [] });
+    }
+    groups[index.get(name)].sets.push(set);
+  }
+  for (const group of groups) {
+    group.sets.sort((a, b) => a.setIndex - b.setIndex);
+  }
+  return groups;
 }
 
 export default function WorkoutPage() {
@@ -53,9 +72,10 @@ export default function WorkoutPage() {
       setMessage('Add an exercise name and at least one set.');
       return;
     }
+    const typedName = exerciseName.trim();
     const result = await logSets({
       date,
-      exerciseName: exerciseName.trim(),
+      exerciseName: canonicalExerciseName(typedName) || typedName,
       unit,
       sets: parsed,
       clientRequestId: crypto.randomUUID(),
@@ -168,24 +188,43 @@ export default function WorkoutPage() {
             {daySessions.map((session) => (
               <Card key={session.id}>
                 <p className="text-sm font-medium capitalize">{session.status} · volume {Math.round(totalVolume(session.sets))}</p>
-                <div className="mt-3 space-y-2">
-                  {(session.sets ?? []).map((set) => (
-                    <div key={set.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span>
-                        {set.exerciseName} · set {set.setIndex} · {set.weight} {set.unit} × {set.reps}
-                        {set.isWarmup ? ' · warm-up' : ''}
-                      </span>
-                      <span className="flex gap-2">
-                        <button
-                          className="text-xs text-muted"
-                          onClick={() => updateSet(set.id, { reps: Number(set.reps) + 1 })}
-                        >
-                          +1 rep
-                        </button>
-                        <button aria-label="Delete set" onClick={() => deleteSet(set.id)}>
-                          <Trash2 size={14} className="text-danger" />
-                        </button>
-                      </span>
+                <div className="mt-4 space-y-5">
+                  {groupLoggedSets(session.sets).map((group) => (
+                    <div key={group.name}>
+                      <p className="text-sm font-medium mb-2">{group.name}</p>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-xs text-muted">
+                            <th className="pb-2 font-medium">Set</th>
+                            <th className="pb-2 font-medium">Weight</th>
+                            <th className="pb-2 font-medium">Reps</th>
+                            <th className="pb-2 font-medium"><span className="sr-only">Actions</span></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.sets.map((set) => (
+                            <tr key={set.id} className="border-t border-border/60">
+                              <td className="py-2 pr-3">
+                                {set.setIndex}
+                                {set.isWarmup ? ' · warm-up' : ''}
+                              </td>
+                              <td className="py-2 pr-3">{set.weight} {set.unit}</td>
+                              <td className="py-2 pr-3">{set.reps}</td>
+                              <td className="py-2 text-right whitespace-nowrap">
+                                <button
+                                  className="text-xs text-muted mr-3"
+                                  onClick={() => updateSet(set.id, { reps: Number(set.reps) + 1 })}
+                                >
+                                  +1 rep
+                                </button>
+                                <button aria-label={`Delete ${group.name} set ${set.setIndex}`} onClick={() => deleteSet(set.id)}>
+                                  <Trash2 size={14} className="text-danger inline" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   ))}
                   {session.status === 'skipped' && <p className="text-sm text-muted">This day was skipped and is not a completed workout.</p>}

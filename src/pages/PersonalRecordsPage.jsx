@@ -1,6 +1,7 @@
 import { PageHeader } from '../components/layout/PageHeader.jsx';
 import { Card, CardTitle } from '../components/ui/Card.jsx';
 import { useTraining } from '../hooks/useTraining.js';
+import { canonicalExerciseName, exerciseMatchKey } from '../data/exercises.js';
 
 const LABELS = {
   max_weight: 'Heaviest weight',
@@ -13,9 +14,16 @@ export default function PersonalRecordsPage() {
   const { records, loading } = useTraining();
   const groups = new Map();
   for (const record of records) {
-    const list = groups.get(record.exerciseName) ?? [];
-    list.push(record);
-    groups.set(record.exerciseName, list);
+    const key = exerciseMatchKey(record.exerciseName) || record.exerciseName;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.items.push(record);
+    } else {
+      groups.set(key, {
+        label: canonicalExerciseName(record.exerciseName) || record.exerciseName,
+        items: [record],
+      });
+    }
   }
 
   return (
@@ -25,11 +33,11 @@ export default function PersonalRecordsPage() {
         <div className="h-48 rounded-2xl bg-surface border border-border animate-pulse" />
       ) : (
         <div className="space-y-4">
-          {[...groups.entries()].map(([exercise, items]) => (
-            <Card key={exercise}>
-              <CardTitle>{exercise}</CardTitle>
+          {[...groups.entries()].map(([key, group]) => (
+            <Card key={key}>
+              <CardTitle>{group.label}</CardTitle>
               <div className="mt-4 space-y-2 text-sm">
-                {items.map((record) => (
+                {group.items.map((record) => (
                   <p key={record.id}>
                     {LABELS[record.recordType] || record.recordType}: {record.value}
                     {record.weight != null && record.recordType === 'reps_at_weight' ? ` reps at ${record.weight} ${record.unit}` : ''}
