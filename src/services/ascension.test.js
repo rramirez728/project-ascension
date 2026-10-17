@@ -47,6 +47,18 @@ describe('energy and goal lock', () => {
     });
     expect(suggestion.calories).toBe(suggestion.tdee - 250);
     expect(suggestCalorieTarget(2000, 'cut', 250)).toBe(1750);
+    const maintenance = buildMacroSuggestion({
+      sex: 'male',
+      age: 30,
+      heightCm: 180,
+      weight: 200,
+      units: 'lb',
+      activityLevel: 'lightly_active',
+      fitnessGoal: 'maintain',
+      calorieAdjustment: 0,
+    });
+    expect(maintenance.calories).toBe(maintenance.tdee);
+    expect(maintenance.tdee).toBe(Math.round(maintenance.bmr * 1.375));
   });
 
   it('does not replace a manual calorie target', () => {

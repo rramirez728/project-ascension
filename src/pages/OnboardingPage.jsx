@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button.jsx';
 import { Input } from '../components/ui/Input.jsx';
 import { useSettingsContext } from '../contexts/SettingsContext.jsx';
 import { trainingRepository, weightRepository } from '../database/index.js';
-import { FITNESS_GOALS } from '../services/calculations/energyCalculations.js';
+import { ACTIVITY_FACTORS, FITNESS_GOALS, buildMacroSuggestion } from '../services/calculations/energyCalculations.js';
 import { applyCalculatedTargets } from '../services/calculations/goalLock.js';
 import { buildSuggestedPlan } from '../services/plans/suggestedPlan.js';
 import { todayISO } from '../utils/dates.js';
@@ -53,6 +53,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [targets, setTargets] = useState({ calories: '', protein: '', carbs: '', fat: '' });
+  const [suggestionShown, setSuggestionShown] = useState(false);
   const [form, setForm] = useState({
     sex: '',
     age: '',
@@ -76,6 +77,20 @@ export default function OnboardingPage() {
     () => buildSuggestedPlan(form.trainingDays || 3),
     [form.trainingDays],
   );
+
+  const suggestion = useMemo(() => buildMacroSuggestion({
+    sex: form.sex,
+    age: Number(form.age),
+    heightCm,
+    weight: Number(form.currentWeight),
+    units,
+    activityLevel: form.activityLevel,
+    fitnessGoal: 'maintain',
+    calorieAdjustment: 0,
+  }), [form.sex, form.age, form.currentWeight, form.activityLevel, heightCm, units]);
+
+  const activityFactor = ACTIVITY_FACTORS[form.activityLevel];
+  const activityLabel = ACTIVITY_CHOICES.find((option) => option.value === form.activityLevel)?.label ?? 'selected';
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -113,6 +128,17 @@ export default function OnboardingPage() {
     && targets.carbs !== '' && Number.isFinite(Number(targets.carbs)) && Number(targets.carbs) >= 0;
 
   const setTarget = (key, value) => setTargets((prev) => ({ ...prev, [key]: value }));
+
+  const applySuggestion = () => {
+    if (!suggestion.calories) return;
+    setTargets({
+      calories: String(suggestion.calories),
+      protein: String(suggestion.protein ?? ''),
+      carbs: String(suggestion.carbs ?? ''),
+      fat: String(suggestion.fat ?? ''),
+    });
+    setSuggestionShown(true);
+  };
 
   const finish = async () => {
     setSaving(true);
@@ -282,6 +308,20 @@ export default function OnboardingPage() {
           <form onSubmit={(event) => { event.preventDefault(); if (targetsReady) advance(); }}>
             <h1 className="text-3xl font-semibold">Configure your plan</h1>
             <p className="text-muted mt-3 mb-6">Enter the daily calories, protein, carbs, and fat you want to follow.</p>
+            <button
+              type="button"
+              onClick={applySuggestion}
+              disabled={!suggestion.calories}
+              className="w-full text-left rounded-xl border border-border px-4 py-3 mb-4 hover:border-accent/60 hover:bg-accent/5 disabled:opacity-50"
+            >
+              <p className="font-medium">Suggest macros</p>
+              <p className="text-sm text-muted mt-0.5">Mifflin–St Jeor resting calories, multiplied by the activity factor you entered.</p>
+            </button>
+            {suggestionShown && suggestion.bmr && (
+              <p className="text-sm text-muted mb-4">
+                Resting calories are {suggestion.bmr} using Mifflin–St Jeor. Multiplied by your {activityLabel.toLowerCase()} activity factor of {activityFactor}, estimated maintenance is {suggestion.tdee} calories. Protein, fat, and carbs are split from that number. Change any field before you continue.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <Input label="Calories" type="number" min="1" autoFocus value={targets.calories} onChange={(event) => setTarget('calories', event.target.value)} />
               <Input label="Protein (g)" type="number" min="1" value={targets.protein} onChange={(event) => setTarget('protein', event.target.value)} />
