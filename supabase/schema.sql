@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS user_settings (
   sleep_goal NUMERIC NOT NULL DEFAULT 8,
   units TEXT NOT NULL DEFAULT 'lb' CHECK (units IN ('lb', 'kg')),
   theme TEXT NOT NULL DEFAULT 'dark' CHECK (theme IN ('dark', 'light')),
-  usda_api_key TEXT DEFAULT ''
+  usda_api_key TEXT DEFAULT '',
+  openai_api_key TEXT NOT NULL DEFAULT ''
 );
 
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;

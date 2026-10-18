@@ -52,7 +52,7 @@ export const realtimeTools = [
     unit: string,
     preparationState: string,
   }, ['foodName', 'quantity', 'unit']),
-  tool('add_food_entry', 'Prepare a food log. Set confirmed true only after the user has said what they ate. This does not finish saving until confirm_pending_action returns saved true.', {
+  tool('add_food_entry', 'Prepare a food log after the food, amount, and unit are clear. Set confirmed true when the user wants it logged. This does not finish saving until confirm_pending_action returns saved true.', {
     confirmed: { type: 'boolean' },
     date: string,
     items: { type: 'array', items: foodItem },
@@ -69,13 +69,13 @@ export const realtimeTools = [
     fat: number,
   }),
   tool('delete_food_entry', 'Delete one saved food.', { entryId: string }, ['entryId']),
-  tool('log_body_weight', 'Prepare a weigh-in. Set confirmed true only after the user states a weight.', {
+  tool('log_body_weight', 'Prepare a weigh-in after the weight and unit are clear. Set confirmed true when the user wants it logged.', {
     weight: number,
     unit: { type: 'string', enum: ['lb', 'kg'] },
     date: string,
     confirmed: { type: 'boolean' },
   }, ['weight', 'date', 'confirmed']),
-  tool('log_exercise_sets', 'Prepare workout sets. Set confirmed true only after the user states the sets they did. Warm-ups should set isWarmup true.', {
+  tool('log_exercise_sets', 'Prepare workout sets after the exercise, reps, weight, and unit are clear. Set confirmed true when the user wants them logged. Warm-ups should set isWarmup true.', {
     exerciseName: string,
     unit: { type: 'string', enum: ['lb', 'kg'] },
     date: string,
@@ -91,7 +91,7 @@ export const realtimeTools = [
     weight: number,
     date: string,
   }),
-  tool('confirm_pending_action', 'Save the entry the user just agreed to. Call this only after they say yes.', {
+  tool('confirm_pending_action', 'Save the entry the user just agreed to. Call this after any clear agreement, such as yes, save it, go ahead, log it, or confirm. Do not require one exact phrase.', {
     actionId: string,
   }),
 ];
@@ -103,9 +103,12 @@ Greet them once and ask what they ate or trained.
 For a branded or packaged food, call calculate_food_macros before you choose numbers. It searches the web for the package label.
 If the tool returns a label, speak those numbers and say they come from the product label. Save with source "label", confidence "high", and the tool's sourceNote.
 If the tool says to estimate, calculate the numbers yourself, say they are estimates, and save with source "estimate", confidence "medium", and sourceNote "AI estimate, not a verified database value."
-Ask for a missing amount, unit, or raw versus cooked state. Do not invent those.
+If the product, amount, or unit is unclear, ask one short question. Do not guess pounds, kilograms, grams, ounces, or the serving size.
+When those details are clear, say what you will save.
+Any clear agreement is enough. Yes, save it, go ahead, log it, confirm, and other ordinary agreements all count. Do not ask for one special phrase.
+When they agree, call confirm_pending_action.
 Only say an entry was saved when a tool result has saved true.
-If a tool returns pending_confirmation, it is not saved. Ask the user to say yes, then call confirm_pending_action.
+If a tool returns pending_confirmation, it is not saved. Call confirm_pending_action as soon as they agree.
 Do not log hypothetical food or workouts.
 Corrections update the existing entry. Do not add a second copy.
 There is no steps tool. You may acknowledge steps, but do not say they were saved.

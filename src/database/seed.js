@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS = {
   units: 'lb',
   theme: 'dark',
   usdaApiKey: '',
+  openaiApiKey: '',
   displayName: '',
   age: null,
   sex: null,
@@ -47,5 +48,6 @@ export async function seedDatabase() {
     migrated.fatTargetManual = true;
   }
   if (existing.usdaApiKey === undefined) migrated.usdaApiKey = '';
+  if (existing.openaiApiKey === undefined) migrated.openaiApiKey = '';
   await db.settings.put(migrated);
 }

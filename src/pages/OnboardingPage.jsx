@@ -9,6 +9,7 @@ import { applyCalculatedTargets } from '../services/calculations/goalLock.js';
 import { buildSuggestedPlan } from '../services/plans/suggestedPlan.js';
 import { todayISO } from '../utils/dates.js';
 import { feetInchesToCm } from '../utils/units.js';
+import { API_KEY_PROMPT_KEY } from '../components/features/settings/ApiKeyPrompt.jsx';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -166,8 +167,10 @@ export default function OnboardingPage() {
         carbs: Number(targets.carbs),
         fat: Number(targets.fat),
       }, { accept: true });
+      sessionStorage.setItem(API_KEY_PROMPT_KEY, '1');
       await updateSettings({ ...next, goalChangeSource: 'user' });
     } catch (err) {
+      sessionStorage.removeItem(API_KEY_PROMPT_KEY);
       setError(err?.message || 'Could not save your plan.');
       setSaving(false);
     }
@@ -177,6 +180,7 @@ export default function OnboardingPage() {
     setSaving(true);
     setError('');
     try {
+      sessionStorage.setItem(API_KEY_PROMPT_KEY, '1');
       await updateSettings({
         onboardingComplete: true,
         calorieTargetManual: true,
@@ -185,6 +189,7 @@ export default function OnboardingPage() {
         fatTargetManual: true,
       });
     } catch (err) {
+      sessionStorage.removeItem(API_KEY_PROMPT_KEY);
       setError(err?.message || 'Could not skip setup.');
       setSaving(false);
     }

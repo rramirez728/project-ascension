@@ -156,7 +156,7 @@ export default function AssistantPage() {
         <div className="flex-1 space-y-3 mb-4">
           {messages.length === 0 && (
             <p className="text-sm text-muted">
-              Click Talk. The assistant greets you in its own voice, then you can tell it what you ate or trained. Nothing is saved until you say yes or tap Confirm.
+              Click Talk. The assistant greets you in its own voice, then you can tell it what you ate or trained. Nothing is saved until you agree, in your own words, or tap Confirm.
             </p>
           )}
           {messages.map((message, index) => (

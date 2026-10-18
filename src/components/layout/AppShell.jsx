@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react';
 import { Sidebar } from './Sidebar.jsx';
 import { MobileNav } from './MobileNav.jsx';
 import { TopBar } from './TopBar.jsx';
+import { ApiKeyPrompt } from '../features/settings/ApiKeyPrompt.jsx';
 
 /** Main app shell with sidebar and content area. */
 export function AppShell() {
@@ -28,6 +29,7 @@ export function AppShell() {
           </AnimatePresence>
         </main>
         <MobileNav />
+        <ApiKeyPrompt />
         {location.pathname !== '/assistant' && (
           <Link
             to="/assistant"

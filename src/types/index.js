@@ -19,6 +19,7 @@
  * @property {WeightUnit} units
  * @property {ThemeMode} theme
  * @property {string} [usdaApiKey]
+ * @property {string} [openaiApiKey]
  * @property {string} [displayName]
  * @property {number|null} [age]
  * @property {'male'|'female'|null} [sex]

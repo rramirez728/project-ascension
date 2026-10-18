@@ -4,6 +4,14 @@ import { findFoodCorrectionTarget, findSetCorrectionTarget } from './toolValidat
 
 const NUTRIENT_IDS = { calories: [1008, 2047], protein: [1003], carbs: [1005], fat: [1004, 1007] };
 
+function settingsForModel(row) {
+  if (!row) return row;
+  const copy = { ...row };
+  delete copy.openai_api_key;
+  delete copy.usda_api_key;
+  return copy;
+}
+
 function round(value) {
   return Math.round(Number(value) * 10) / 10;
 }
@@ -177,7 +185,7 @@ export async function executeTool(db, userId, name, args, context) {
     case 'get_nutrition_goals': {
       const { data, error } = await db.from('user_settings').select('*').eq('user_id', userId).maybeSingle();
       if (error) throw new Error(error.message);
-      return { ok: true, settings: data };
+      return { ok: true, settings: settingsForModel(data) };
     }
     case 'get_daily_nutrition': {
       const date = args.date || today;

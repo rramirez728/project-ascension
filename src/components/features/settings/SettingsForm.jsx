@@ -19,11 +19,18 @@ export function SettingsForm({ settings, onSave }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [showKeyHelp, setShowKeyHelp] = useState(false);
   const heightParts = cmToFeetInches(settings?.heightCm || 0);
 
   useEffect(() => {
     if (settings) setForm(settings);
   }, [settings]);
+
+  useEffect(() => {
+    if (window.location.hash !== '#openai-key') return;
+    setShowKeyHelp(true);
+    document.getElementById('openai-key')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   if (!form) return null;
 
@@ -52,6 +59,7 @@ export function SettingsForm({ settings, onSave }) {
       })(),
       calorieAdjustment: parseInt(form.calorieAdjustment, 10) || 250,
       trustedAutoLogging: Boolean(form.trustedAutoLogging),
+      openaiApiKey: String(form.openaiApiKey ?? '').trim(),
     };
     await onSave(updates);
     if (newPassword) {
@@ -100,6 +108,53 @@ export function SettingsForm({ settings, onSave }) {
             </div>
           </Card>
         )}
+
+        <Card id="openai-key">
+          <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-4">OpenAI assistant</h3>
+          <Input
+            label="Your OpenAI API key"
+            type="password"
+            value={form.openaiApiKey ?? ''}
+            onChange={(e) => handleChange('openaiApiKey', e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Leave blank to use the key already set up for this app"
+          />
+          <p className="text-xs text-muted mt-2">
+            Paste your own key to spend your OpenAI credits. A ChatGPT subscription does not pay for this. Leave the field blank to keep using the key already set up for this app.
+          </p>
+          <button
+            type="button"
+            className="mt-3 text-sm text-accent hover:underline"
+            aria-expanded={showKeyHelp}
+            onClick={() => setShowKeyHelp((open) => !open)}
+          >
+            How to find your OpenAI API key
+          </button>
+          {showKeyHelp && (
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted">
+              <li>
+                Open{' '}
+                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  platform.openai.com/api-keys
+                </a>
+                {' '}and sign in. This is the API site, separate from the ChatGPT app.
+              </li>
+              <li>Click Create new secret key. Copy it right away. OpenAI shows the full key only once. If you lose it, create a new one.</li>
+              <li>Paste the key in the field above and click Save Settings.</li>
+              <li>
+                Add credits on that same API account. A ChatGPT Plus or Pro plan does not cover the assistant.{' '}
+                <a href="https://help.openai.com/en/articles/8264644-setting-up-and-managing-prepaid-api-billing" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  Open the billing guide
+                </a>
+                , add a payment method, and buy credits. The smallest purchase is $5.
+              </li>
+              <li>Auto-reload is on by default when you first buy credits. Turn it off if you do not want OpenAI to buy more automatically.</li>
+              <li>If a voice conversation is already open, click End, then Talk, so the new key is used.</li>
+              <li>Keep the key private. Anyone who has it can spend your credits.</li>
+            </ol>
+          )}
+        </Card>
 
         <Card>
           <h3 className="text-sm font-medium text-muted uppercase tracking-wide mb-4">Profile</h3>
